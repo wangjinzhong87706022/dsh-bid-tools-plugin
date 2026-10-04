@@ -1,0 +1,268 @@
+{
+  "template_id": "common-disclosure-v1",
+  "name": "通用身份泄露与元数据扫描（所有暗标口径必挂）",
+  "region": "*",
+  "scope": {
+    "city": ["*"],
+    "industry": ["*"],
+    "tender_type": ["*"],
+    "note": "与地域口径模板叠加使用；本模板规则在任何口径下均生效"
+  },
+  "legal_level": "NORMATIVE",
+  "effective_from": "2023-08-01",
+  "effective_to": "",
+  "status": "ACTIVE",
+  "supersedes": [],
+  "basis": "河北省\"双盲\"评审技术要求：技术暗标不得出现投标人名称、地址、人员、徽标、特有工法、企业文化等可识别信息；明示部分以六个星号代替。元数据清洗依据国信办通字〔2025〕2 号与等保三级要求",
+  "source_url": "https://www.hebei.gov.cn/",
+  "rules": [
+    {
+      "id": "LEAK.CREDIT_CODE",
+      "name": "不得出现统一社会信用代码",
+      "category": "DISCLOSURE",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "text.pattern",
+      "expect": {
+        "patterns": ["[0-9A-HJ-NPQRTUWXY]{2}[0-9]{6}[0-9A-HJ-NPQRTUWXY]{10}"],
+        "occurrences": 0
+      },
+      "message": "正文中出现 18 位统一社会信用代码，将直接暴露投标人身份",
+      "suggestion": "删除或替换为 ＊＊＊＊＊＊",
+      "basis": "技术暗标不得出现可识别投标人身份的信息",
+      "auto_fixable": true
+    },
+    {
+      "id": "LEAK.MOBILE",
+      "name": "不得出现手机号码",
+      "category": "DISCLOSURE",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "text.pattern",
+      "expect": { "patterns": ["1[3-9][0-9]{9}"], "occurrences": 0 },
+      "message": "正文中出现 11 位手机号码",
+      "suggestion": "删除联系方式，或替换为 ＊＊＊＊＊＊",
+      "basis": "技术暗标不得出现联系人及联系方式",
+      "auto_fixable": true
+    },
+    {
+      "id": "LEAK.EMAIL",
+      "name": "不得出现电子邮箱",
+      "category": "DISCLOSURE",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "text.pattern",
+      "expect": { "patterns": ["[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"], "occurrences": 0 },
+      "message": "正文中出现电子邮箱地址",
+      "suggestion": "删除邮箱，或替换为 ＊＊＊＊＊＊",
+      "basis": "技术暗标不得出现联系方式",
+      "auto_fixable": true
+    },
+    {
+      "id": "LEAK.BANK_ACCOUNT",
+      "name": "不得出现银行账号",
+      "category": "DISCLOSURE",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "text.pattern",
+      "expect": { "patterns": ["[0-9]{16,19}"], "occurrences": 0 },
+      "message": "正文中出现 16-19 位连续数字，疑似银行账号",
+      "suggestion": "核对并删除账号信息",
+      "basis": "技术暗标不得出现可识别信息",
+      "auto_fixable": false,
+      "needs_review": true
+    },
+    {
+      "id": "LEAK.COMPANY_NAME",
+      "name": "不得出现投标人单位名称",
+      "category": "DISCLOSURE",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "text.pattern",
+      "expect": {
+        "patterns": [
+          "[\\u4e00-\\u9fa5]{2,15}(有限公司|股份有限公司|有限责任公司|集团公司|总公司)",
+          "[\\u4e00-\\u9fa5]{2,15}(集团|公司)(承建|承修|承制|施工)"
+        ],
+        "occurrences": 0,
+        "exclude_patterns": ["招标人", "采购人", "招标代理", "监理单位", "设计单位", "发包人"]
+      },
+      "message": "正文中出现疑似单位名称，暗标中不得出现投标人名称",
+      "suggestion": "将单位名称替换为 ＊＊＊＊＊＊ 或改为\"投标人\"\"本单位\"等中性表述",
+      "basis": "技术暗标不得出现投标人名称；明示部分以六个星号代替",
+      "auto_fixable": true,
+      "needs_review": true
+    },
+    {
+      "id": "LEAK.ADDRESS",
+      "name": "不得出现投标人详细地址",
+      "category": "DISCLOSURE",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "text.pattern",
+      "expect": {
+        "patterns": ["[\\u4e00-\\u9fa5]{2,8}(省|自治区)[\\u4e00-\\u9fa5]{2,8}市[\\u4e00-\\u9fa5]{2,8}(区|县)[\\u4e00-\\u9fa5]{2,15}(路|街|道|大道)[0-9]{1,4}号"],
+        "occurrences": 0
+      },
+      "message": "正文中出现疑似详细通讯地址",
+      "suggestion": "删除地址信息或替换为 ＊＊＊＊＊＊",
+      "basis": "技术暗标不得出现投标人地址",
+      "auto_fixable": true
+    },
+    {
+      "id": "LEAK.PERSON",
+      "name": "不得出现人员姓名",
+      "category": "DISCLOSURE",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "text.pattern",
+      "expect": {
+        "patterns": [
+          "(?:项目经理|项目总监|技术负责人|总工程师|法定代表人|法人代表|授权代表|联系人|项目负责人)\\s*[:：]\\s*[\\u4e00-\\u9fa5]{2,4}",
+          "(?:姓名|名字)\\s*[:：为]\\s*[\\u4e00-\\u9fa5]{2,4}",
+          "[\\u4e00-\\u9fa5]{2,4}\\s*[（(]\\s*(?:签字|签章|签名|盖章)\\s*[)）]",
+          "(?:注册建造师|注册造价师|注册监理工程师)\\s*[:：]?\\s*(?:证书编号)?\\s*[\\u4e00-\\u9fa5]{2,4}[0-9]{4,}"
+        ],
+        "occurrences": 0
+      },
+      "message": "正文中出现人员姓名或职务署名（如「项目经理：张三」）",
+      "suggestion": "删除人员姓名，改用\"项目经理\"\"技术负责人\"等职务表述",
+      "basis": "技术暗标不得出现投标人人员信息",
+      "auto_fixable": true,
+      "needs_review": true
+    },
+    {
+      "id": "LEAK.CULTURE",
+      "name": "不得出现企业文化、宣传性内容",
+      "category": "DISCLOSURE",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "text.pattern",
+      "expect": {
+        "patterns": ["企业使命", "企业愿景", "核心价值观", "企业精神", "公司口号", "服务宗旨", "荣获.*称号", "连续.*年.*被评为"],
+        "occurrences": 0
+      },
+      "message": "正文中出现企业文化或宣传性内容，具有可识别性",
+      "suggestion": "删除企业文化、荣誉宣传内容，技术暗标只保留技术方案本身",
+      "basis": "技术暗标不得出现企业文化等可识别内容",
+      "auto_fixable": false
+    },
+    {
+      "id": "META.CREATOR",
+      "name": "文档属性 creator 不得含身份信息",
+      "category": "METADATA",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "metadata.creator",
+      "expect": { "empty_or_neutral": true, "neutral_values": ["", "bidforge", "author", "user"] },
+      "message": "docProps/core.xml 的 creator 字段残留作者身份",
+      "suggestion": "清空文档作者信息，或设为中性值",
+      "basis": "元数据泄露面管控；等保三级个人信息保护要求",
+      "auto_fixable": true
+    },
+    {
+      "id": "META.LAST_MODIFIED_BY",
+      "name": "文档属性 lastModifiedBy 不得含身份信息",
+      "category": "METADATA",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "metadata.lastModifiedBy",
+      "expect": { "empty_or_neutral": true, "neutral_values": ["", "bidforge", "author", "user"] },
+      "message": "docProps/core.xml 的 lastModifiedBy 字段残留修改者身份",
+      "suggestion": "清空最后修改者信息",
+      "basis": "元数据泄露面管控",
+      "auto_fixable": true
+    },
+    {
+      "id": "META.COMPANY",
+      "name": "文档属性 company 必须为空",
+      "category": "METADATA",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "metadata.company",
+      "expect": { "must_be_empty": true },
+      "message": "docProps 的 Company 字段残留单位名称",
+      "suggestion": "清空公司属性（core.xml 与 app.xml 两处）",
+      "basis": "元数据泄露面管控",
+      "auto_fixable": true
+    },
+    {
+      "id": "META.REVISIONS",
+      "name": "不得保留修订痕迹",
+      "category": "METADATA",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "marks.revisions",
+      "expect": { "max": 0 },
+      "message": "文档中存在未接受的修订（w:ins / w:del）",
+      "suggestion": "接受全部修订后另存，或使用本系统清洗功能",
+      "basis": "元数据泄露面管控；修订痕迹可反推编制过程与人员",
+      "auto_fixable": true
+    },
+    {
+      "id": "META.COMMENTS",
+      "name": "不得保留批注",
+      "category": "METADATA",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "marks.comments",
+      "expect": { "max": 0 },
+      "message": "文档中存在批注（w:comment）",
+      "suggestion": "删除全部批注",
+      "basis": "元数据泄露面管控",
+      "auto_fixable": true
+    },
+    {
+      "id": "META.HIDDEN_TEXT",
+      "name": "不得保留隐藏文字",
+      "category": "METADATA",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "marks.hidden_text",
+      "expect": { "max": 0 },
+      "message": "文档中存在隐藏文字（w:vanish），属典型作弊特征",
+      "suggestion": "删除全部隐藏文字",
+      "basis": "元数据泄露面管控；隐藏文字常被用于夹带身份信息",
+      "auto_fixable": true
+    },
+    {
+      "id": "META.RSID",
+      "name": "建议清除 rsid 修订会话标识",
+      "category": "METADATA",
+      "type": "SOFT",
+      "severity": "WARN",
+      "detect": "marks.rsid_count",
+      "expect": { "max": 0 },
+      "message": "settings.xml 中残留 rsid 会话标识，可反推编辑序列",
+      "suggestion": "清除 rsid 列表并启用 removePersonalInformation",
+      "basis": "元数据泄露面管控（深度清洗建议）",
+      "auto_fixable": true
+    },
+    {
+      "id": "IMG.EXIF",
+      "name": "图片不得携带 EXIF / XMP 元数据",
+      "category": "METADATA",
+      "type": "HARD",
+      "severity": "REJECT",
+      "detect": "images.exif",
+      "expect": { "max": 0 },
+      "message": "存在携带 EXIF/IPTC/XMP 元数据的图片",
+      "suggestion": "使用本系统清洗功能剥离图片元数据",
+      "basis": "元数据泄露面管控",
+      "auto_fixable": true
+    },
+    {
+      "id": "IMG.COLOR",
+      "name": "图片应转为灰度（不得出现彩色内容）",
+      "category": "FORMAT",
+      "type": "SOFT",
+      "severity": "WARN",
+      "detect": "images.color",
+      "expect": { "allowed": ["gray", "grayscale", "GRAY"] },
+      "message": "存在彩色图片，暗标通常要求全篇黑白",
+      "suggestion": "将图片转为灰度后重新插入",
+      "basis": "技术暗标不得出现彩色内容",
+      "auto_fixable": true
+    }
+  ]
+}

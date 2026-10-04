@@ -1,0 +1,9 @@
+node_modules/
+lib/
+.smoke-out/
+*.tsbuildinfo
+.env
+.codeartsdoer/
+.playwright-mcp/
+__pycache__/
+*.pyc

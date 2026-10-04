@@ -1,0 +1,16 @@
+services:
+  bid-tools:
+    build: .
+    container_name: bid-tools-mcp
+    env_file: .env
+    ports:
+      - "8300:8300"
+    restart: unless-stopped
+    # 标书定稿文件若放在宿主机目录，请挂载给容器（file_path 用容器内路径）
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://127.0.0.1:8300/mcp', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3

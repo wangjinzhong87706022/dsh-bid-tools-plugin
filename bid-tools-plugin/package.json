@@ -1,0 +1,30 @@
+{
+  "name": "bid-tools-plugin",
+  "version": "0.1.0",
+  "description": "标书写作确定性工具集（DSH 原生插件）：招标要求抽取 / 知识库检索 / 合规自查 / 定稿归档",
+  "type": "module",
+  "main": "./lib/index.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --outDir lib --rootDir src --module commonjs --moduleResolution node --rewriteRelativeImportExtensions --target ES2022 --resolveJsonModule --esModuleInterop --skipLibCheck src/index.ts src/config.ts src/llm.ts src/ragflow.ts src/logic.ts src/parser.ts src/pii.ts src/rules.ts src/docxFacts.ts src/factcheck.ts src/collusion.ts src/fairness.ts src/facts.ts src/render.ts src/types.ts src/vendor.d.ts",
+    "test:smoke": "tsc src/parser.ts src/pii.ts src/rules.ts src/factcheck.ts src/docxFacts.ts src/collusion.ts src/fairness.ts --outDir .smoke-out --module commonjs --moduleResolution node --rewriteRelativeImportExtensions --target ES2022 --resolveJsonModule --esModuleInterop --skipLibCheck && node tests/smoke-deterministic.cjs && node tests/smoke-docx.cjs && node tests/smoke-pagecount.cjs && node tests/smoke-collusion.cjs && node tests/smoke-fairness.cjs && node tests/integration-pipeline.cjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis-plugin-include": "^1.0.9",
+    "@deepseek-ai/cordis-plugin-loader": "^1.0.5",
+    "jszip": "^3.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

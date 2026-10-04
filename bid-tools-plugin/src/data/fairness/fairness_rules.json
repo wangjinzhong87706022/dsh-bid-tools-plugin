@@ -1,0 +1,163 @@
+{
+  "template_id": "fairness-review-v1",
+  "name": "招标文件公平竞争审查规则（通用）",
+  "region": "*",
+  "scope": {
+    "city": ["*"],
+    "industry": ["*"],
+    "tender_type": ["*"]
+  },
+  "legal_level": "ADMIN_REG",
+  "effective_from": "2024-05-01",
+  "effective_to": "",
+  "status": "ACTIVE",
+  "supersedes": [],
+  "basis": "《招标投标领域公平竞争审查规则》（国家发展改革委等 8 部门令 2024 年第 16 号，自 2024-05-01 施行）；《中华人民共和国招标投标法》第二十条；《中华人民共和国招标投标法实施条例》第三十二条",
+  "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+  "rules": [
+    {
+      "id": "FAIR.SPECIFY_BRAND",
+      "name": "限定或指定特定专利、商标、品牌、原产地或供应商",
+      "category": "量身定制",
+      "type": "HARD",
+      "severity": "WARN",
+      "detect": {
+        "keywords": ["指定品牌", "指定型号", "指定产地", "指定供应商", "指定专利", "唯一指定", "仅限品牌", "只能采用", "必须为", "须指定", "须为品牌", "非指定不得", "指定产品", "原装进口限定"],
+        "patterns": ["(?:指定|仅限|只能|必须|须)(?:采用|使用)?[^，。；\n]{0,20}(?:品牌|牌|型号|产地|供应商)"]
+      },
+      "message": "招标文件存在限定或指定特定品牌/型号/产地/供应商的表述，涉嫌以不合理条件排斥潜在投标人",
+      "suggestion": "将特定品牌/型号表述改为性能、参数等客观技术指标；确需引用品牌时，应写明\"或相当于\"并说明关键参数要求",
+      "basis": "《招标投标法实施条例》第三十二条第（五）项",
+      "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+      "auto_fixable": false
+    },
+    {
+      "id": "FAIR.REGION_PERFORMANCE",
+      "name": "以特定行政区域或特定行业的业绩、奖项作为加分或中标条件",
+      "category": "地域限制",
+      "type": "HARD",
+      "severity": "WARN",
+      "detect": {
+        "keywords": ["本地业绩", "本市业绩", "本省业绩", "省内业绩", "当地业绩", "市域内业绩", "省域内业绩", "本地项目业绩", "本地类似业绩", "在本省承接", "在本市承接"],
+        "patterns": ["(?:本地|本省|本市|省内|市域|省域|当地)[^，。；\n]{0,10}业绩"]
+      },
+      "message": "招标文件以特定行政区域业绩作为加分或中标条件，涉嫌排斥外地潜在投标人",
+      "suggestion": "取消地域限定，将业绩要求改为\"近三年内承担过类似项目\"等客观、与履约能力相关的要求",
+      "basis": "《招标投标法实施条例》第三十二条第（三）项",
+      "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+      "auto_fixable": false
+    },
+    {
+      "id": "FAIR.LOCAL_BRANCH",
+      "name": "强制要求设立本地分支机构、在当地缴纳税费或聘用本地人员",
+      "category": "地域限制",
+      "type": "HARD",
+      "severity": "WARN",
+      "detect": {
+        "keywords": ["设立本地分支机构", "设立分公司", "本地纳税", "当地纳税", "在本地缴税", "本地社保", "在当地注册", "须本地注册", "注册地在本", "本地公司", "聘用本地人员", "本地用工"],
+        "patterns": ["(?:须|必须|应)在(?:本地|当地|本市|本省)(?:设立|注册|纳税|缴纳|聘用)"]
+      },
+      "message": "招标文件强制要求投标人在本地设立分支机构、缴纳税费或聘用本地人员，涉嫌排斥外地潜在投标人",
+      "suggestion": "删除本地分支机构、本地纳税、本地用工等要求，不得以投标人所在地作为准入门槛",
+      "basis": "《中华人民共和国招标投标法》第二十条；《招标投标领域公平竞争审查规则》（2024 年第 16 号令）",
+      "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+      "auto_fixable": false
+    },
+    {
+      "id": "FAIR.OWNERSHIP_RESTRICT",
+      "name": "非法限定投标人所有制形式或组织形式",
+      "category": "所有制限制",
+      "type": "HARD",
+      "severity": "WARN",
+      "detect": {
+        "keywords": ["须为国有企业", "限国有企业", "央企", "国有企业优先", "民营企业不得", "不得为民营企业", "须为上市公司", "限上市公司", "所有制形式"],
+        "patterns": ["(?:须|限|仅限|只限)(?:为)?(?:国有|民营|上市|外资|中央|地方国有)企业"]
+      },
+      "message": "招标文件非法限定投标人所有制形式或组织形式，涉嫌排斥潜在投标人",
+      "suggestion": "删除所有制、组织形式限制，依法必须招标的项目不得限定潜在投标人所有制形式或组织形式",
+      "basis": "《招标投标法实施条例》第三十二条第（六）项",
+      "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+      "auto_fixable": false
+    },
+    {
+      "id": "FAIR.SPECIFIC_AWARD",
+      "name": "以特定奖项作为加分或中标条件",
+      "category": "奖项限制",
+      "type": "SOFT",
+      "severity": "WARN",
+      "detect": {
+        "keywords": ["鲁班奖", "詹天佑奖", "国家优质工程奖", "优质工程奖", "省优质工程", "省级优质工程", "市优质工程", "市级优质工程", "本地奖项", "奖项加分", "获奖加分", "获得奖项加分"],
+        "patterns": ["(?:获得|取得|具备|具有)[^，。；\n]{0,25}(?:奖|奖项)[^，。；\n]{0,12}(?:加分|得分|优先)"]
+      },
+      "message": "招标文件以特定（尤其是本地行政区域）奖项作为加分条件，需人工核查是否构成排斥",
+      "suggestion": "国家级奖项可作为加分但不应唯一；地方性奖项原则上不得作为加分或中标条件，建议改为与履约能力相关的客观业绩指标",
+      "basis": "《招标投标法实施条例》第三十二条第（三）项",
+      "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+      "auto_fixable": false
+    },
+    {
+      "id": "FAIR.QUALIFICATION_MISMATCH",
+      "name": "设定的资格、技术、商务条件与项目实际需要不相适应",
+      "category": "量身定制",
+      "type": "SOFT",
+      "severity": "WARN",
+      "detect": {
+        "keywords": ["特级资质", "一级资质", "甲级资质"],
+        "patterns": ["(?:造价|预算|金额|投资)[^，。；\n]{0,10}(?:万元|亿元)[^，。；\n]{0,30}(?:特级|一级|甲级)"]
+      },
+      "message": "招标文件资质等级要求可能与项目规模不相适应（小规模项目要求过高资质），涉嫌排斥潜在投标人",
+      "suggestion": "对照项目投资规模与《建筑业企业资质标准》核定合理的资质等级要求，避免设置明显高于项目实际需要的门槛",
+      "basis": "《招标投标法实施条例》第三十二条第（二）项",
+      "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+      "auto_fixable": false
+    },
+    {
+      "id": "FAIR.DISCRIMINATE_OUTSIDER",
+      "name": "对潜在投标人采取差别化待遇或排斥外地企业",
+      "category": "地域限制",
+      "type": "HARD",
+      "severity": "WARN",
+      "detect": {
+        "keywords": ["外地企业不得", "拒绝外地", "非本地企业不得", "本地企业优先", "本地企业加分", "外地企业须", "外地企业需", "本地企业同等条件下优先"],
+        "patterns": ["(?:外地|非本地|外省|市外|省外)企业[^，。；\n]{0,15}(?:不得|不能|优先|加分|排除)"]
+      },
+      "message": "招标文件对外地企业设置差别化限制或给予本地企业优先待遇，涉嫌排斥潜在投标人",
+      "suggestion": "删除对外地企业的任何差别化限制条款，本地与外地企业应一视同仁",
+      "basis": "《中华人民共和国招标投标法》第二十条",
+      "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+      "auto_fixable": false
+    },
+    {
+      "id": "FAIR.SENSITIVE_WORD",
+      "name": "错敏词与歧视性、倾向性表述",
+      "category": "错敏词",
+      "type": "SOFT",
+      "severity": "WARN",
+      "detect": {
+        "keywords": ["量身定制", "内定", "萝卜招标", "歧视", "排斥", "暗中指定", "暗示中标", "倾向某"],
+        "patterns": []
+      },
+      "message": "招标文件中出现疑似倾向性、歧视性或敏感表述，需人工核查",
+      "suggestion": "清理倾向性、歧视性表述，确保招标文件客观中立、对所有潜在投标人公平",
+      "basis": "《招标投标领域公平竞争审查规则》（2024 年第 16 号令）",
+      "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+      "auto_fixable": false
+    },
+    {
+      "id": "FAIR.RESTRICT_TRADE_TOOL",
+      "name": "指定或变相指定特定交易工具、平台或认证服务",
+      "category": "量身定制",
+      "type": "SOFT",
+      "severity": "WARN",
+      "detect": {
+        "keywords": ["指定交易平台", "必须使用某某平台", "指定CA", "指定电子认证", "指定投标工具", "指定制作软件", "强制购买"],
+        "patterns": ["(?:指定|必须|强制)[^，。；\n]{0,15}(?:平台|工具|软件|认证|CA)"]
+      },
+      "message": "招标文件指定或变相指定特定交易工具、平台或认证服务，涉嫌限制竞争",
+      "suggestion": "按国办发〔2024〕21 号要求开放对接各类专业交易工具，不得指定特定工具或服务",
+      "basis": "《招标投标领域公平竞争审查规则》第五条第（六）（七）（八）项",
+      "source_url": "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202404/t20240403_1365443.html",
+      "auto_fixable": false
+    }
+  ]
+}

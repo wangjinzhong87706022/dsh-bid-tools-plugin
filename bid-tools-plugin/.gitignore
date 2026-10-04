@@ -1,0 +1,7 @@
+node_modules/
+.smoke-out/
+lib/
+*.tsbuildinfo
+.env
+# 由 scripts/ingest-industries.mjs --dry-run 生成的扁平化语料（可随时再生）
+src/data/industries/*_corpus/
