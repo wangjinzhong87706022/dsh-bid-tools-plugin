@@ -1,0 +1,263 @@
+{
+  "version": "1.0.0",
+  "basis": "《招标投标法实施条例》第五十一条（否决投标情形）；《评标委员会和评标方法暂行规定》（七部委令第12号）；财政部令第87号《政府采购货物和服务招标投标管理办法》第五十五条（综合评分法）；河北省\"双盲\"评审相关规定",
+
+  "precheck_items": [
+    {
+      "code": "P01",
+      "item": "投标文件签字盖章",
+      "category": "形式符合性",
+      "severity": "REJECT",
+      "basis": "招标投标法实施条例第51条第1项",
+      "check_hint": "投标文件未经投标单位盖章和单位负责人签字的，评标委员会应当否决其投标"
+    },
+    {
+      "code": "P02",
+      "item": "联合体协议书",
+      "category": "形式符合性",
+      "severity": "REJECT",
+      "basis": "招标投标法实施条例第51条第2项",
+      "check_hint": "投标联合体没有提交共同投标协议的，否决其投标（非联合体投标不适用）"
+    },
+    {
+      "code": "P03",
+      "item": "资格条件满足",
+      "category": "资格审查",
+      "severity": "REJECT",
+      "basis": "招标投标法实施条例第51条第3项",
+      "check_hint": "投标人不符合国家或者招标文件规定的资格条件的，否决其投标"
+    },
+    {
+      "code": "P04",
+      "item": "唯一投标报价",
+      "category": "符合性",
+      "severity": "REJECT",
+      "basis": "招标投标法实施条例第51条第4项",
+      "check_hint": "同一投标人提交两个以上不同的投标文件或投标报价的，否决其投标（招标文件要求提交备选投标的除外）"
+    },
+    {
+      "code": "P05",
+      "item": "报价未超最高限价且不低于成本",
+      "category": "商务符合性",
+      "severity": "REJECT",
+      "basis": "招标投标法实施条例第51条第5项",
+      "check_hint": "投标报价低于成本或者高于招标文件设定的最高投标限价的，否决其投标"
+    },
+    {
+      "code": "P06",
+      "item": "实质性要求响应",
+      "category": "符合性",
+      "severity": "REJECT",
+      "basis": "招标投标法实施条例第51条第6项",
+      "check_hint": "投标文件没有对招标文件的实质性要求和条件作出响应的，否决其投标"
+    },
+    {
+      "code": "P07",
+      "item": "无串标、弄虚作假、行贿行为",
+      "category": "合规性",
+      "severity": "REJECT",
+      "basis": "招标投标法实施条例第51条第7项；第67条（串通投标认定情形）",
+      "check_hint": "存在串通投标、弄虚作假、行贿等违法行为的，否决其投标"
+    },
+    {
+      "code": "P08",
+      "item": "投标保证金",
+      "category": "形式符合性",
+      "severity": "REJECT",
+      "basis": "招标文件约定；招标投标法实施条例第26条",
+      "check_hint": "未按招标文件要求提交投标保证金或保函的，按否决投标处理"
+    },
+    {
+      "code": "P09",
+      "item": "技术暗标无身份泄露",
+      "category": "河北双盲",
+      "severity": "REJECT",
+      "basis": "河北省\"双盲\"评审技术要求；冀政务办〔2023〕51号",
+      "check_hint": "技术暗标中出现投标人名称、地址、人员、LOGO、特有工法等可识别信息的，否决其投标"
+    },
+    {
+      "code": "P10",
+      "item": "技术暗标格式合规",
+      "category": "河北双盲",
+      "severity": "REJECT",
+      "basis": "河北省\"双盲\"评审技术要求；地市/行业细化口径",
+      "check_hint": "技术暗标字体、字号、行距、页边距、页数、页眉页脚、彩色内容不符合要求的，否决其投标"
+    },
+    {
+      "code": "P11",
+      "item": "★号关键参数零负偏离",
+      "category": "技术符合性",
+      "severity": "REJECT",
+      "basis": "招标文件约定；招标投标法实施条例第51条第6项",
+      "check_hint": "货物类项目标注★的关键技术参数不得负偏离",
+      "applies_to": ["material_equipment", "new_energy"]
+    },
+    {
+      "code": "P12",
+      "item": "工期与质量承诺响应",
+      "category": "符合性",
+      "severity": "REJECT",
+      "basis": "招标文件约定；招标投标法实施条例第51条第6项",
+      "check_hint": "工期超过招标文件要求或质量目标低于招标文件要求的，属未响应实质性要求",
+      "applies_to": ["construction", "urban_renewal", "new_energy", "municipal", "water", "mep"]
+    }
+  ],
+
+  "price_methods": {
+    "BASE_PRICE_LINEAR": {
+      "name": "基准价线性扣分法",
+      "desc": "以基准价为中心，每高于1%扣 above_penalty 分，每低于1%扣 below_penalty 分，扣完为止",
+      "params": {"base": "AVG_DROP", "drop_n": 1, "above_penalty": 1.0, "below_penalty": 0.5}
+    },
+    "LOWEST_FULL": {
+      "name": "最低价满分法",
+      "desc": "最低有效报价得满分，其余得分 = 满分 × (最低价 / 报价)",
+      "params": {}
+    },
+    "BASE_PRICE_RATIO": {
+      "name": "基准价比率法",
+      "desc": "得分 = 满分 × (基准价 / 报价)，超过满分时取满分",
+      "params": {"base": "AVG_ALL"}
+    },
+    "REASONABLE_LOW": {
+      "name": "合理低价法（下浮区间）",
+      "desc": "报价落在 [基准价×(1-下限), 基准价×(1+上限)] 区间内得满分，超出按线性扣分",
+      "params": {"base": "AVG_DROP", "drop_n": 1, "lower_pct": 0.05, "upper_pct": 0.03,
+                 "out_penalty": 2.0}
+    },
+    "HEBEI_DUAL_RANDOM": {
+      "name": "河北交通\"双随机\"基准价",
+      "desc": "随机确定评标基准价计算方法：在平均价法、去掉极值平均价法、最低价法等方法中随机抽取",
+      "params": {"candidates": ["AVG_ALL", "AVG_DROP", "AVG_DROP_LOWER", "MIN_PRICE"],
+                 "above_penalty": 1.0, "below_penalty": 0.5}
+    }
+  },
+
+  "base_price_algorithms": {
+    "AVG_ALL": "所有有效报价的算术平均值",
+    "AVG_DROP": "去掉 n 个最高价和 n 个最低价后的算术平均值",
+    "AVG_DROP_LOWER": "去掉 n 个最低价后的算术平均值（抑制恶意低价）",
+    "MIN_PRICE": "有效报价中的最低价",
+    "CONTROL_WEIGHT": "最高限价与平均价的加权平均"
+  },
+
+  "profiles": [
+    {
+      "profile_id": "hebei-construction",
+      "name": "河北省房屋建筑和市政工程施工招标（综合评估法）",
+      "industry": "construction",
+      "region": "河北省",
+      "tender_type": "工程",
+      "total_score": 100,
+      "weights": {"TECH": 40, "COMMERCIAL": 45, "CREDIT": 15},
+      "price_method": "BASE_PRICE_LINEAR",
+      "price_params": {"base": "AVG_DROP", "drop_n": 1, "above_penalty": 1.0, "below_penalty": 0.5}
+    },
+    {
+      "profile_id": "hebei-urban-renewal",
+      "name": "河北省老旧小区改造 / 城市更新项目（综合评估法）",
+      "industry": "urban_renewal",
+      "region": "河北省",
+      "tender_type": "工程",
+      "total_score": 100,
+      "weights": {"TECH": 45, "COMMERCIAL": 40, "CREDIT": 15},
+      "price_method": "BASE_PRICE_LINEAR",
+      "price_params": {"base": "AVG_DROP", "drop_n": 1, "above_penalty": 1.0, "below_penalty": 0.5},
+      "note": "居民协调机制权重显著高于普通房建项目"
+    },
+    {
+      "profile_id": "hebei-new-energy-epc",
+      "name": "新能源电站 EPC 总承包（综合评估法）",
+      "industry": "new_energy",
+      "region": "河北省",
+      "tender_type": "工程",
+      "total_score": 100,
+      "weights": {"TECH": 45, "COMMERCIAL": 40, "CREDIT": 15},
+      "price_method": "BASE_PRICE_LINEAR",
+      "price_params": {"base": "AVG_DROP", "drop_n": 1, "above_penalty": 1.0, "below_penalty": 0.5}
+    },
+    {
+      "profile_id": "hebei-goods-procurement",
+      "name": "材料设备采购（综合评分法）",
+      "industry": "material_equipment",
+      "region": "河北省",
+      "tender_type": "货物",
+      "total_score": 100,
+      "weights": {"TECH": 45, "COMMERCIAL": 40, "CREDIT": 15},
+      "price_method": "BASE_PRICE_LINEAR",
+      "price_params": {"base": "AVG_ALL", "drop_n": 0, "above_penalty": 0.8, "below_penalty": 0.4},
+      "note": "财政部令第87号：货物项目价格分值不得低于总分值的30%"
+    },
+    {
+      "profile_id": "hebei-transport",
+      "name": "河北省公路水运工程（双随机基准价）",
+      "industry": "construction",
+      "region": "河北省",
+      "tender_type": "交通工程",
+      "total_score": 100,
+      "weights": {"TECH": 40, "COMMERCIAL": 50, "CREDIT": 10},
+      "price_method": "HEBEI_DUAL_RANDOM",
+      "price_params": {"above_penalty": 1.0, "below_penalty": 0.5}
+    },
+    {
+      "profile_id": "hebei-municipal",
+      "name": "河北省市政道路与给排水工程（综合评估法）",
+      "industry": "municipal",
+      "region": "河北省",
+      "tender_type": "工程",
+      "total_score": 100,
+      "weights": {"TECH": 40, "COMMERCIAL": 50, "CREDIT": 10},
+      "price_method": "BASE_PRICE_LINEAR",
+      "price_params": {"base": "AVG_DROP", "drop_n": 1, "above_penalty": 1.0, "below_penalty": 0.5},
+      "note": "交通导改与管线保护方案是技术标重点"
+    },
+    {
+      "profile_id": "hebei-water",
+      "name": "河北省水利水电工程（综合评估法）",
+      "industry": "water",
+      "region": "河北省",
+      "tender_type": "工程",
+      "total_score": 100,
+      "weights": {"TECH": 45, "COMMERCIAL": 40, "CREDIT": 15},
+      "price_method": "BASE_PRICE_LINEAR",
+      "price_params": {"base": "AVG_DROP", "drop_n": 1, "above_penalty": 1.0, "below_penalty": 0.5},
+      "note": "施工导流与度汛方案是技术标重点"
+    },
+    {
+      "profile_id": "hebei-mep",
+      "name": "河北省机电安装与装饰装修工程（综合评估法）",
+      "industry": "mep",
+      "region": "河北省",
+      "tender_type": "工程",
+      "total_score": 100,
+      "weights": {"TECH": 50, "COMMERCIAL": 35, "CREDIT": 15},
+      "price_method": "BASE_PRICE_LINEAR",
+      "price_params": {"base": "AVG_DROP", "drop_n": 1, "above_penalty": 1.0, "below_penalty": 0.5},
+      "note": "深化设计与系统调试技术权重较高"
+    },
+    {
+      "profile_id": "hebei-transport-pack",
+      "name": "河北省公路水运工程（双随机基准价）",
+      "industry": "transport",
+      "region": "河北省",
+      "tender_type": "工程",
+      "total_score": 100,
+      "weights": {"TECH": 40, "COMMERCIAL": 50, "CREDIT": 10},
+      "price_method": "HEBEI_DUAL_RANDOM",
+      "price_params": {"above_penalty": 1.0, "below_penalty": 0.5},
+      "note": "基准价算法随机抽取，桥隧施工方案是技术标重点"
+    },
+    {
+      "profile_id": "hebei-epc",
+      "name": "河北省工程总承包（EPC）综合评估法",
+      "industry": "epc",
+      "region": "河北省",
+      "tender_type": "工程",
+      "total_score": 100,
+      "weights": {"TECH": 50, "COMMERCIAL": 35, "CREDIT": 15},
+      "price_method": "BASE_PRICE_LINEAR",
+      "price_params": {"base": "AVG_DROP", "drop_n": 1, "above_penalty": 1.0, "below_penalty": 0.5},
+      "note": "设计管理与设计施工一体化协同技术权重较高"
+    }
+  ]
+}

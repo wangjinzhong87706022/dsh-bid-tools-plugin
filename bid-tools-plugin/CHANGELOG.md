@@ -2,6 +2,17 @@
 
 本文件记录 bid-tools-plugin 的版本变更。日期为提交日，非发布日。
 
+## [0.3.0] — 2026-10-05
+
+### 新增
+
+- **AIBidForge5.0 数据资产移植**（3 文件）
+  - `industries/gov_procurement.json`：政府采购与货物服务行业知识包（87 号令口径，138 行）
+  - `industries/it_informatization.json`：信息化与 IT 行业知识包（软件开发/系统集成/运维，160 行）
+  - `eval/scoring_models.json`：评分模型（12 否决前检查项 P01-P12 + 5 种价格分算法 + 6 种基准价算法 + 10 个评分 profile，263 行）
+  - `industry_detect.json`：11 行业自动识别配置（关键词/业绩词/资质词，75 行）
+- 行业知识包数量 9 → 11
+
 ## [0.2.0] — 2026-10-04
 
 ### 新增

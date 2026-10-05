@@ -50,30 +50,35 @@ bid-tools-plugin/
 │   ├── facts.ts        # 【确定性】ProjectFacts 单一事实源（从需求抽取 12 类事实 + 一致性校验）
 │   ├── render.ts       # 【确定性】OOXML 渲染导出（Markdown→.docx，jszip 直写）
 │   ├── vendor.d.ts     # DSH 官方包类型桩（拿到真实包后删除）
-│   └── data/           # 规则包与行业知识包（来自 AIBidForge3.1，MIT 许可）
+│   └── data/           # 规则包与行业知识包（来自 AIBidForge 3.1+5.0，Apache-2.0/MIT 许可）
 │       ├── rules/
 │       │   ├── common_disclosure.json  # 通用身份泄露与元数据扫描（always-on，必挂）
 │       │   ├── hebei_provincial.json   # 河北省级/雄安暗标口径
 │       │   ├── hebei_baoding.json      # 保定市口径
 │       │   ├── hebei_zhangjiakou.json  # 张家口市口径
 │       │   └── hebei_transport.json    # 交通行业口径
-│       └── industries/
-│           └── water.json              # 水利水电行业知识包（河道治理/水库加固/灌区）
-│       └── fairness/
-│           └── fairness_rules.json     # 9 条 FAIR.* 公平竞争审查规则（外置、可溯源）
+│       ├── industries/                 # 11 个行业知识包（9 个来自 3.1，2 个来自 5.0）
+│       │   └── water.json              # 水利水电行业知识包（河道治理/水库加固/灌区）
+│       ├── fairness/
+│       │   └── fairness_rules.json     # 9 条 FAIR.* 公平竞争审查规则（外置、可溯源）
+│       ├── eval/
+│       │   └── scoring_models.json     # 评分模型（12 否决前检查项+5 价格分算法+10 评分 profile）[5.0]
+│       └── industry_detect.json        # 11 行业自动识别配置（关键词/业绩词/资质词）[5.0]
 └── README.md
 ```
 
 ### 确定性规则包与行业包（来源）
 
-`src/data/` 下的数据直接取自 **AIBidForge3.1（atomgit，MIT，Copyright 2026 FullFrame AI）**，
+`src/data/` 下的数据取自 **AIBidForge 3.1 与 5.0（atomgit，MIT/Apache-2.0，Copyright 2026 FullFrame AI）**，
 未做语义改动，仅作为插件内置规则/知识资产：
 
 | 文件 | 作用 | 在插件中的消费方 |
 |------|------|-----------------|
 | `rules/common_disclosure.json` | 17 条身份泄露+元数据规则（信用代码/手机/邮箱/银行/单位名/地址/人员/企业文化；creator/company/修订/批注/隐藏文字/rsid/图片EXIF/彩色） | `pii.ts` 的 `scanDisclosure`、`rules.ts` 的 always-on 叠加 |
 | `rules/hebei_*.json` | 河北各地域暗标模板（字体/字号/行距/页边距/页数等，多为 OOXML 几何规则） | `rules.ts` 按 `region/city/industry` 口径匹配选中 |
-| `industries/*.json` | **9 个行业知识包**（construction / epc / material_equipment / mep / municipal / new_energy / transport / urban_renewal / water）。每包含 12± 章节大纲、5–8 工法、6–8 资质、6–8 评分点、7–10 规范、6–8 风险、3–4 模板；water.json 另含 SL 303/677/260/223 等水利法规 | 大纲生成的知识种子；**批量灌库步骤见下文「行业知识包建库」** |
+| `industries/*.json` | **11 个行业知识包**（construction / epc / gov_procurement / it_informatization / material_equipment / mep / municipal / new_energy / transport / urban_renewal / water）。每包含 12± 章节大纲、5–8 工法、6–8 资质、6–8 评分点、7–10 规范、6–8 风险、3–4 模板。其中 `gov_procurement`（政府采购 87 号令口径）与 `it_informatization`（信息化与 IT）来自 AIBidForge5.0，其余 9 个来自 3.1 | 大纲生成的知识种子；**批量灌库步骤见下文「行业知识包建库」** |
+| `eval/scoring_models.json` | 评分模型：12 个否决前检查项（P01-P12，形式/资格/符合性/双盲）+ 5 种价格分算法（基准价线性/最低价满分/合理低价/河北双随机）+ 10 个评分 profile（按行业×地区）[5.0] | 评标前检查与价格分测算（待集成） |
+| `industry_detect.json` | 11 行业自动识别配置：每行业含 keywords（招标文件行业判定）/ performance（业绩相似度）/ qualifications（资质语义匹配）[5.0] | `tender_extract_requirements` 行业识别增强（待集成） |
 
 > 规则引擎对"纯文本输入"（`bid_check_rules` 只传 `text`）时，字体字号页边距/页数等需要 OOXML 几何特征的规则会**静默跳过**（记为 skipped_rule_count），不误报；
 > 但当以 **docx 文件**为输入时，应调用 `bid_audit_docx` —— 它先用 `docxFacts.ts` 解析 OOXML 补齐几何/元数据/痕迹/图片事实，
