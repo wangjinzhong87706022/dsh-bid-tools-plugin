@@ -11,7 +11,21 @@
   - `industries/it_informatization.json`：信息化与 IT 行业知识包（软件开发/系统集成/运维，160 行）
   - `eval/scoring_models.json`：评分模型（12 否决前检查项 P01-P12 + 5 种价格分算法 + 6 种基准价算法 + 10 个评分 profile，263 行）
   - `industry_detect.json`：11 行业自动识别配置（关键词/业绩词/资质词，75 行）
-- 行业知识包数量 9 → 11
+- **代码集成**（3 模块 + 2 工具 + 1 增强）
+  - `src/industryDetect.ts`：确定性行业自动识别（移植自 5.0 `knowledge/industry_detect.py`，11 行业关键词命中，`_meta` 滤除 + pack_key 单源映射 + 回落 construction）
+  - `src/precheck.ts` + 工具 `bid_precheck_bid`：评标前否决项自检（P01-P12，确定性规则判定 PASS/WARN/REJECT_RISK，不可自动判定项标 MANUAL 并指引对应工具）
+  - `src/scorePrice.ts` + 工具 `bid_score_price`：价格分测算（5 种评分方法公式复算，零 LLM 零随机；河北双随机输出全部候选算法得分矩阵供现场查表，不代抽）
+  - `tender_parse_constraints` 输出新增 `detected_industry` 字段（行业自动识别）
+- **2 新行业包灌库**：gov_procurement 47 chunks + it_informatization 52 chunks，检索验证通过
+- 行业知识包数量 9 → 11；工具数量 16 → 18
+- `tests/smoke-newtools.cjs`：新工具冒烟测试 16 项
+
+### 变更
+
+- `src/index.ts`：注册 18 工具，import 3 新模块
+- `src/types.ts`：导出 IndustryDetectResult / PrecheckReport / PriceScoreReport 等类型
+- `package.json`：build/test:smoke 脚本加 3 新源文件
+- `README.md`：数据资产消费方更新（待集成 → 已集成），行业数 9→11，加新工具说明
 
 ## [0.2.0] — 2026-10-04
 

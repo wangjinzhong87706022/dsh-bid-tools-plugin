@@ -15,6 +15,8 @@
  *   bid_fact_check              -> 步骤⑤ FactCheck 事实溯源（无来源即标「待人工补充」）
  *   bid_check_collusion         -> 步骤⑤ 围串标/公平性自检（SimHash 雷同 + 报价规律，零 LLM）
  *   bid_check_fairness          -> 步骤① 招标文件公平竞争审查（FAIR.* 9 类排斥限制竞争条款，零 LLM）
+ *   bid_precheck_bid            -> 步骤⑤前置 评标前否决项自检（P01-P12，确定性规则，零 LLM）
+ *   bid_score_price             -> 步骤④/⑤ 价格分测算（5 种评分方法公式复算，零 LLM 零随机）
  *   bid_archive_final           -> 步骤⑥ 定稿归档回流历史标书库
  *
  * 步骤②④（大纲生成、分章长文生成）由 DSH 技能层直调 LLM；步骤⑥人工审校是 HITL 卡点。
@@ -36,6 +38,9 @@ import {
   summarize,
 } from './logic.ts'
 import { parseTender } from './parser.ts'
+import { detectIndustry } from './industryDetect.ts'
+import { precheckBid } from './precheck.ts'
+import { scorePrice } from './scorePrice.ts'
 import { maskPII, scanDisclosure, scanAndMask } from './pii.ts'
 import { validateFacts } from './rules.ts'
 import { collectDocxFacts } from './docxFacts.ts'
@@ -306,7 +311,8 @@ export function apply(ctx: Context): void {
       name: 'tender_parse_constraints',
       description:
         '用确定性规则（关键词+正则）解析招标文件，抽取废标/否决条款、暗标格式要求、评分办法与权重、' +
-        '资质业绩要求、关键参数（工期/保证金/最高限价）。不使用 LLM，结果可复现可举证。' +
+        '资质业绩要求、关键参数（工期/保证金/最高限价），并自动识别所属行业（11 行业知识包口径）。' +
+        '不使用 LLM，结果可复现可举证。' +
         '应作为 tender_extract_requirements 的前置步骤：先定规则抽取，再做 LLM 语义补充。',
       parameters: {
         tender_text: { type: 'string', required: true, description: '招标文件全文（已解析为纯文本/Markdown）' },
@@ -315,10 +321,20 @@ export function apply(ctx: Context): void {
       async execute(args: Record<string, any>) {
         const tenderText = String(args.tender_text ?? '')
         if (!tenderText.trim()) return toJson({ error: 'tender_text 为空' })
-        const report = parseTender(clip(tenderText))
+        const clipped = clip(tenderText)
+        const report = parseTender(clipped) as unknown as Record<string, unknown>
+        const industry = detectIndustry(clipped)
+        report.detected_industry = {
+          name: industry.name,
+          pack_key: industry.pack_key,
+          confidence: industry.confidence,
+          matched_keywords: industry.matched_keywords,
+          note: '行业识别基于 11 行业知识包关键词命中（确定性），用于选择知识库行业包与报价口径；未识别时回落通用工程包 construction',
+        }
+        const stats = (report.stats ?? {}) as Record<string, unknown>
         ctx.logger?.info?.(
-          `[bid-tools] 约束抽取完成：废标${report.stats.reject_count}条/格式${report.stats.format_count}条/` +
-            `评分${report.stats.scoring_count}条/资质${report.stats.qualification_count}条`,
+          `[bid-tools] 约束抽取完成：废标${stats.reject_count}条/格式${stats.format_count}条/` +
+            `评分${stats.scoring_count}条/资质${stats.qualification_count}条/行业=${industry.name}`,
         )
         return toJson(report)
       },
@@ -710,9 +726,86 @@ export function apply(ctx: Context): void {
     }),
   )
 
+  // ---- 步骤⑤前置：评标前否决项自检（P01-P12，移植自 AIBidForge5.0 scoring_models） ----
+
+  ctx.tools.register(
+    defineTool({
+      name: 'bid_precheck_bid',
+      description:
+        '对标书草稿做评标前否决项自检（P01-P12）：签字盖章/联合体协议/资格条件/唯一报价/限价与成本/' +
+        '实质性响应/串标作假/保证金/暗标身份泄露/暗标格式/★号参数/工期质量。' +
+        '确定性规则直接判定（PASS/WARN/REJECT_RISK），不可自动判定项标 MANUAL 并指引对应工具。零 LLM。',
+      parameters: {
+        draft_text: { type: 'string', required: true, description: '标书草稿全文（或待自检章节全文）' },
+        control_price: { type: 'number', description: '最高投标限价（元），传入后自动核对报价范围' },
+        required_duration_days: { type: 'number', description: '招标要求的工期（日历天），传入后自动核对工期承诺' },
+        industry: { type: 'string', description: '评标行业（材料设备/新能源适用 ★号参数规则），可用 tender_parse_constraints 的 detected_industry.name' },
+        tender_type: { type: 'string', description: '标的类型（工程/货物/服务），可选' },
+      },
+      output: { schema: { type: 'json' }, render: jsonRender },
+      async execute(args: Record<string, any>) {
+        const draftText = String(args.draft_text ?? '')
+        if (!draftText.trim()) return toJson({ error: 'draft_text 为空' })
+        const report = precheckBid({
+          draft_text: draftText,
+          control_price: args.control_price !== undefined ? Number(args.control_price) : undefined,
+          required_duration_days: args.required_duration_days !== undefined ? Number(args.required_duration_days) : undefined,
+          industry: args.industry !== undefined ? String(args.industry) : undefined,
+          tender_type: args.tender_type !== undefined ? String(args.tender_type) : undefined,
+        })
+        ctx.logger?.info?.(
+          `[bid-tools] 否决项自检：REJECT_RISK ${report.summary.reject_risk} / WARN ${report.summary.warn} / ` +
+            `MANUAL ${report.summary.manual} / PASS ${report.summary.pass}`,
+        )
+        return toJson(report)
+      },
+    }),
+  )
+
+  // ---- 步骤④/⑤：价格分测算（5 种评分方法公式复算，零 LLM 零随机） ----
+
+  ctx.tools.register(
+    defineTool({
+      name: 'bid_score_price',
+      description:
+        '按评分方法复算各报价的价格分（确定性公式，零 LLM 零随机）。' +
+        '支持 5 种方法：基准价线性扣分 / 最低价满分 / 基准价比率 / 合理低价下浮区间 / 河北双随机。' +
+        '河北双随机不代评标委员会抽取，输出全部候选基准价算法的得分矩阵供现场查表。' +
+        '含超限价否决检查（实施条例第 51 条第 5 项）。',
+      parameters: {
+        prices: { type: 'json', required: true, description: '全部有效报价数组（数值），如 [850, 860, 870]（单位与 unit 一致）' },
+        method: { type: 'string', description: 'BASE_PRICE_LINEAR（默认）/ LOWEST_FULL / BASE_PRICE_RATIO / REASONABLE_LOW / HEBEI_DUAL_RANDOM' },
+        full_score: { type: 'number', description: '价格分满分，默认 100' },
+        control_price: { type: 'number', description: '最高投标限价（与报价同单位），传入后做超限价否决检查' },
+        params: { type: 'json', description: '覆盖默认算法参数：base/drop_n/above_penalty/below_penalty/lower_pct/upper_pct/out_penalty' },
+        unit: { type: 'string', description: '报价单位：万元（默认）/ 元' },
+      },
+      output: { schema: { type: 'json' }, render: jsonRender },
+      async execute(args: Record<string, any>) {
+        const prices = Array.isArray(args.prices) ? args.prices.map((p: unknown) => Number(p)) : []
+        if (prices.length === 0) return toJson({ error: 'prices 必须是非空数值数组' })
+        try {
+          const report = scorePrice({
+            prices,
+            method: args.method !== undefined ? String(args.method) : undefined,
+            full_score: args.full_score !== undefined ? Number(args.full_score) : undefined,
+            control_price: args.control_price !== undefined ? Number(args.control_price) : undefined,
+            params: args.params && typeof args.params === 'object' ? args.params : undefined,
+            unit: args.unit !== undefined ? String(args.unit) : undefined,
+          })
+          ctx.logger?.info?.(`[bid-tools] 价格分测算：${report.method}，基准价 ${report.base_price.value}`)
+          return toJson(report)
+        } catch (err) {
+          return toJson({ error: err instanceof Error ? err.message : String(err) })
+        }
+      },
+    }),
+  )
+
   ctx.logger?.info?.(
-    '[bid-tools] 16 个工具注册完成：tender_extract_requirements / tender_parse_constraints / kb_search_materials / ' +
+    '[bid-tools] 18 个工具注册完成：tender_extract_requirements / tender_parse_constraints / kb_search_materials / ' +
       'bid_check_compliance / bid_check_rules / bid_audit_docx / bid_scan_disclosure / bid_mask_pii / bid_fact_check / ' +
-      'bid_check_collusion / bid_check_fairness / bid_archive_final / project_facts_init / project_facts_update / project_facts_check / bid_render_docx',
+      'bid_check_collusion / bid_check_fairness / bid_archive_final / project_facts_init / project_facts_update / project_facts_check / ' +
+      'bid_render_docx / bid_precheck_bid / bid_score_price',
   )
 }

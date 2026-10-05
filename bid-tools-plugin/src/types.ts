@@ -8,6 +8,9 @@ export type { Citation, FactCheckItem, FactCheckReport } from './factcheck.ts'
 export type { CollusionReport, CollusionDoc, SimilarityPair, PricePatternResult, RiskLevel } from './collusion.ts'
 export type { FairnessReport, FairnessHit, FairnessRule, FairnessSummary } from './fairness.ts'
 export type { ProjectFacts, ConsistencyReport, ConsistencyFinding } from './facts.ts'
+export type { IndustryDetectResult } from './industryDetect.ts'
+export type { PrecheckReport, PrecheckItemResult, PrecheckStatus } from './precheck.ts'
+export type { PriceScoreReport, PriceScoreItem, PriceMethod, BaseAlgo } from './scorePrice.ts'
 
 export type RequirementCategory = '评分点' | '资质门槛' | '技术参数' | '商务条款' | '废标条款'
 

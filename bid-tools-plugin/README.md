@@ -77,8 +77,8 @@ bid-tools-plugin/
 | `rules/common_disclosure.json` | 17 条身份泄露+元数据规则（信用代码/手机/邮箱/银行/单位名/地址/人员/企业文化；creator/company/修订/批注/隐藏文字/rsid/图片EXIF/彩色） | `pii.ts` 的 `scanDisclosure`、`rules.ts` 的 always-on 叠加 |
 | `rules/hebei_*.json` | 河北各地域暗标模板（字体/字号/行距/页边距/页数等，多为 OOXML 几何规则） | `rules.ts` 按 `region/city/industry` 口径匹配选中 |
 | `industries/*.json` | **11 个行业知识包**（construction / epc / gov_procurement / it_informatization / material_equipment / mep / municipal / new_energy / transport / urban_renewal / water）。每包含 12± 章节大纲、5–8 工法、6–8 资质、6–8 评分点、7–10 规范、6–8 风险、3–4 模板。其中 `gov_procurement`（政府采购 87 号令口径）与 `it_informatization`（信息化与 IT）来自 AIBidForge5.0，其余 9 个来自 3.1 | 大纲生成的知识种子；**批量灌库步骤见下文「行业知识包建库」** |
-| `eval/scoring_models.json` | 评分模型：12 个否决前检查项（P01-P12，形式/资格/符合性/双盲）+ 5 种价格分算法（基准价线性/最低价满分/合理低价/河北双随机）+ 10 个评分 profile（按行业×地区）[5.0] | 评标前检查与价格分测算（待集成） |
-| `industry_detect.json` | 11 行业自动识别配置：每行业含 keywords（招标文件行业判定）/ performance（业绩相似度）/ qualifications（资质语义匹配）[5.0] | `tender_extract_requirements` 行业识别增强（待集成） |
+| `eval/scoring_models.json` | 评分模型：12 个否决前检查项（P01-P12，形式/资格/符合性/双盲）+ 5 种价格分算法（基准价线性/最低价满分/合理低价/河北双随机）+ 10 个评分 profile（按行业×地区）[5.0] | `bid_precheck_bid`（否决前自检）+ `bid_score_price`（价格分测算） |
+| `industry_detect.json` | 11 行业自动识别配置：每行业含 keywords（招标文件行业判定）/ performance（业绩相似度）/ qualifications（资质语义匹配）[5.0] | `tender_parse_constraints` 的 `detected_industry` 输出字段 |
 
 > 规则引擎对"纯文本输入"（`bid_check_rules` 只传 `text`）时，字体字号页边距/页数等需要 OOXML 几何特征的规则会**静默跳过**（记为 skipped_rule_count），不误报；
 > 但当以 **docx 文件**为输入时，应调用 `bid_audit_docx` —— 它先用 `docxFacts.ts` 解析 OOXML 补齐几何/元数据/痕迹/图片事实，
@@ -98,7 +98,7 @@ RULE_TENDER_TYPE=工程       # 标的类型
 
 ## 行业知识包建库（industries/*.json → RAGFlow）
 
-`industries/` 下的 9 个行业包是结构化知识种子。**要让 `kb_search_materials` 真正能检索到行业知识**，需把它们灌进 RAGFlow 建库。
+`industries/` 下的 11 个行业包是结构化知识种子。**要让 `kb_search_materials` 真正能检索到行业知识**，需把它们灌进 RAGFlow 建库。
 脚本 `scripts/ingest-industries.mjs` 负责这件事：先把每个包扁平化为若干篇带 `tags` 的 Markdown 文档
 （章节/工法/资质/评分点/规范/风险/模板各一篇，粒度细、检索更准），再建库 → 逐篇上传 → 轮询解析至 `DONE`。
 
@@ -177,6 +177,7 @@ npm run test:smoke   # 确定性模块回归测试：编译到 .smoke-out 后跑
 验证 11 条暗标几何规则经 `docxFacts` 补齐事实后全部生效、干净文档 0 REJECT）、FactCheck 溯源、围串标自检
 （SimHash bigram 分词 + 相同文本距离 0 + 近似文本判相似 + 道路/水库判差异明显 + 等差/等比报价规律命中 + 随机/不足样本不命中 + 雷同簇与风险等级编排）、招标文件公平竞争审查（FAIR.* 9 条规则加载 + BIASED 文本命中 5 类 HARD + CLEAN 零误报 + 命中可溯源 + docx 路径抽取同样命中 + requires_human_review 闸门）、规则包与水利包加载。
 - `tests/integration-pipeline.cjs`：**16 工具七步流程串联集成测试 / 端到端 demo**。用合成「招标文件 + 投标草稿 + 多份投标文件」把 16 个工具按标书七步流程跑通确定性闭环，并打印逐步链路追踪与闭环汇总表。对依赖 LLM / RAGFlow 运行时的 4 个工具（`tender_extract_requirements`、`kb_search_materials`、`bid_check_compliance` 的 LLM 语义复核分支、`bid_archive_final`）以**离线桩**演示数据流转并明确标注，绝不伪造判定结果；其余 12 个确定性工具为真实调用。
+- `tests/smoke-newtools.cjs`：**AIBidForge5.0 移植新工具冒烟测试（16 项）**。覆盖 `industryDetect`（11 行业加载/_meta 滤除/识别/pack_key 映射/回落）、`precheck`（12 项否决情形：签字盖章/多报价/超限价/超期/MANUAL 指引）、`scorePrice`（5 方法：AVG_DROP 基准价/线性扣分/最低价满分/合理低价区间/双随机矩阵/超限价否决）。
 
 > 已修复的两个真实缺陷（勿回退）：
 > 1. `vendor.d.ts` 顶部原为 Python 风格头（`# -*- coding: utf-8 -*-` / `"""`），
