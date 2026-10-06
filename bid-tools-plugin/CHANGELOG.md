@@ -19,13 +19,14 @@
 - **2 新行业包灌库**：gov_procurement 47 chunks + it_informatization 52 chunks，检索验证通过
 - 行业知识包数量 9 → 11；工具数量 16 → 18
 - `tests/smoke-newtools.cjs`：新工具冒烟测试 16 项
+- `tests/unit-*.cjs`：3 新模块单元测试 59 个用例（industryDetect 12 / precheck 15 / scorePrice 32，覆盖边界条件/异常路径/分支覆盖）
 
 ### 变更
 
 - `src/index.ts`：注册 18 工具，import 3 新模块
 - `src/types.ts`：导出 IndustryDetectResult / PrecheckReport / PriceScoreReport 等类型
-- `package.json`：build/test:smoke 脚本加 3 新源文件
-- `README.md`：数据资产消费方更新（待集成 → 已集成），行业数 9→11，加新工具说明
+- `package.json`：build/test:smoke 脚本加 3 新源文件 + 3 个单元测试文件
+- `README.md`：数据资产消费方更新（待集成 → 已集成），行业数 9→11，加新工具详细使用说明（bid_precheck_bid/bid_score_price 参数表/示例/输出字段释义），编排顺序加 bid_score_price（报价策略②）与 bid_precheck_bid（否决自检④.5），工具数 16→18
 
 ## [0.2.0] — 2026-10-04
 

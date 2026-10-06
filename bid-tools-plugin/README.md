@@ -136,7 +136,7 @@ BID_ARCHIVE_DATASET_ID=<dataset_id>  # 定稿归档回流（可选，复用同�
 ```bash
 # 1. 把本目录放进 DSH 可访问的位置，在 DSH 中以 bundle 方式安装：
 pnpm install file:/absolute/path/to/bid-tools-plugin
-# 2. 重启 DSH；启动日志出现 "[bid-tools] 16 个工具注册完成" 即挂载成功
+# 2. 重启 DSH；启动日志出现 "[bid-tools] 18 个工具注册完成" 即挂载成功
 ```
 
 配置（环境变量，或在 DSH profile/settings 层注入）：
@@ -168,7 +168,7 @@ BID_ARCHIVE_DATASET_ID=<历史标书库 dataset_id>
 
 ```bash
 npm run typecheck    # TS 类型检查（含 vendor 类型桩）
-npm run test:smoke   # 确定性模块回归测试：编译到 .smoke-out 后跑 40+ 条断言
+npm run test:smoke   # 确定性模块回归测试：编译到 .smoke-out 后跑 100+ 条断言（含 59 个单元测试）
 ```
 
 `test:smoke` 覆盖：招标约束抽取（废标/格式/评分权重/工期/保证金/限价）、PII 脱敏（含
@@ -215,17 +215,115 @@ npm run test:smoke   # 确定性模块回归测试：编译到 .smoke-out 后跑
 - `project_facts_check(facts_json, document_text)` → `{consistency_report{consistent, violations[], warnings[], checked_count}, fact_usage}`（校验文档内容与事实表是否一致，如工期/预算/资质匹配）
 - `bid_render_docx(markdown_text, output_path?, metadata?)` → `{output_path, byte_count, sections, paragraphs, tables, images, warnings[]}`（Markdown→.docx，jszip 直写 OOXML；支持标题/段落/列表/表格/加粗/斜体/页眉页脚/元数据；无需 Word 安装）
 
+**★ 新增确定性 2 个（AIBidForge5.0 移植：否决前自检 + 价格分测算）**
+
+- `bid_precheck_bid(draft_text, control_price?, required_duration_days?, industry?, tender_type?)` → `{industry, items[{code,item,category,severity,status,basis,detail,next_action}], summary{pass,warn,reject_risk,manual}, disclaimer}`
+- `bid_score_price(prices, method?, full_score?, control_price?, params?, unit?)` → `{method, method_name, method_desc, unit, full_score, base_price{value,algorithm,algorithm_desc,notes}, params, scores[{price,score,rank,notes}], candidate_matrix[{algorithm,base_price,scores}], disclaimer}`
+
+### bid_precheck_bid 详细说明
+
+**用途**：投标定稿前对草稿做 12 项否决情形自检（P01-P12），对应评标委员会符合性审查的否决条款。
+确定性规则直接判定，零 LLM；不可自动判定项标 `MANUAL` 并指引对应工具。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `draft_text` | string | 是 | 标书草稿全文（或待自检章节全文） |
+| `control_price` | number | 否 | 最高投标限价（元）。传入后自动核对报价是否超限价（P05） |
+| `required_duration_days` | number | 否 | 招标要求的工期（日历天）。传入后自动核对工期承诺（P12） |
+| `industry` | string | 否 | 评标行业（材料设备/新能源适用 ★号参数规则 P11），可用 `tender_parse_constraints` 返回的 `detected_industry.name` |
+| `tender_type` | string | 否 | 标的类型（工程/货物/服务） |
+
+**示例**：
+
+```
+bid_precheck_bid({
+  draft_text: "我方投标报价为920万元，工期115日历天，已缴纳投标保证金20万元。联合体投标：否。",
+  control_price: 9800000,
+  required_duration_days: 120,
+  industry: "信息化与IT"
+})
+```
+
+**输出字段释义**：
+
+| 字段 | 说明 |
+|------|------|
+| `industry` | 本次自检使用的行业（影响 P11 ★号参数规则是否生效） |
+| `items[].code` | 检查项编号 P01-P12（签字盖章/联合体协议/资格条件/唯一报价/限价成本/实质响应/串标作假/保证金/暗标泄露/暗标格式/★号参数/工期质量） |
+| `items[].status` | `PASS`（通过）/ `WARN`（有风险）/ `REJECT_RISK`（否决风险）/ `MANUAL`（不可自动判定，需人工或工具确认） |
+| `items[].basis` | 判定依据（规则条款出处） |
+| `items[].detail` | 判定详情（含抽取到的报价/工期数值） |
+| `items[].next_action` | MANUAL 项的工具指引（如 P06→`bid_check_compliance`、P07→`bid_check_collusion`、P09→`bid_scan_disclosure`、P10→`bid_audit_docx`） |
+| `summary` | 四类状态计数（pass/warn/reject_risk/manual 之和恒为 12） |
+
+**注意**：`REJECT_RISK` 项必须整改后才能投标；`WARN` 项建议整改；`MANUAL` 项按 `next_action` 指引调用对应工具或人工确认。
+
+### bid_score_price 详细说明
+
+**用途**：按评标办法复算各家报价的价格分（确定性公式复算，零 LLM 零随机）。
+支持 5 种方法；含超限价否决检查（《招标投标法实施条例》第 51 条第 5 项）。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `prices` | number[] | 是 | 全部有效报价数组，如 `[920, 935, 950]`（单位与 `unit` 一致） |
+| `method` | string | 否 | `BASE_PRICE_LINEAR`（默认，基准价线性扣分）/ `LOWEST_FULL`（最低价满分）/ `BASE_PRICE_RATIO`（基准价比率）/ `REASONABLE_LOW`（合理低价下浮区间）/ `HEBEI_DUAL_RANDOM`（河北双随机） |
+| `full_score` | number | 否 | 价格分满分，默认 100 |
+| `control_price` | number | 否 | 最高投标限价（与报价同单位）。传入后做超限价否决检查 |
+| `params` | object | 否 | 覆盖默认算法参数：`base`（基准价算法，默认 AVG_DROP）/ `drop_n`（去高去低价个数，默认 1）/ `above_penalty`（每高 1% 扣分，默认 1）/ `below_penalty`（每低 1% 扣分，默认 0.5）/ `lower_pct`/`upper_pct`/`out_penalty`（合理低价区间参数） |
+| `unit` | string | 否 | 报价单位：`万元`（默认）/ `元` |
+
+**5 种方法的差异**：
+
+| method | 算法 | 基准价默认算法 |
+|--------|------|----------------|
+| `BASE_PRICE_LINEAR` | 以基准价为中心，每高于 1% 扣 `above_penalty` 分、每低于 1% 扣 `below_penalty` 分，扣完为止 | `AVG_DROP`（去掉 n 个最高价和 n 个最低价后取平均） |
+| `LOWEST_FULL` | 最低价得满分，其余按比例得分 | — |
+| `BASE_PRICE_RATIO` | 报价/基准价 × 满分 | `AVG_ALL`（全体平均） |
+| `REASONABLE_LOW` | 基准价下浮区间内得满分，超区间按 `out_penalty` 扣分 | `AVG_DROP` |
+| `HEBEI_DUAL_RANDOM` | 河北双随机：随机抽取基准价算法。**工具不代抽取**，输出全部候选算法的得分矩阵供现场查表 | 输出 `candidate_matrix` |
+
+**示例**：
+
+```
+bid_score_price({
+  prices: [920, 935, 950, 890, 910],
+  method: "BASE_PRICE_LINEAR",
+  control_price: 980,
+  unit: "万元"
+})
+```
+
+**输出字段释义**：
+
+| 字段 | 说明 |
+|------|------|
+| `base_price.value` | 计算出的评标基准价 |
+| `base_price.algorithm` | 基准价算法代号（AVG_DROP/AVG_ALL/AVG_DROP_LOWER/MIN_PRICE/CONTROL_WEIGHT）；招标文件未提供算法时按降级链回落并在 `notes` 注明 |
+| `base_price.notes` | 算法降级说明（如「未提供最高限价，CONTROL_WEIGHT 降级为全体平均」） |
+| `scores[].price/score/rank` | 各家报价的得分与排名（得分降序）；超限价报价得 0 分、rank=0 并注明否决 |
+| `scores[].notes` | 得分明细（如「低于基准价 1.16%，每 1% 扣 0.5 分」） |
+| `candidate_matrix` | 仅 `HEBEI_DUAL_RANDOM` 方法有值：每个候选基准价算法下的各家得分矩阵，供评标委员会现场抽取后查表 |
+| `disclaimer` | 固定免责声明：本测算为确定性公式复算，仅用于投标报价策略参考；评标基准价与得分以评标委员会现场计算为准 |
+
+**注意**：`HEBEI_DUAL_RANDOM` 不代评标委员会做随机抽取（随机不可复现），只输出全部候选算法的得分矩阵——现场抽中哪个算法，直接查表即可。
+
 **推荐编排顺序**（技能层串联）：
 
 ```
-tender_parse_constraints      # ① 先跑确定性规则，锁定废标/格式/评分红线
+tender_parse_constraints      # ① 先跑确定性规则，锁定废标/格式/评分红线 + 自动识别行业（detected_industry）
   → bid_check_fairness           # ① 招标文件公平竞争审查（FAIR.* 9 类排斥限制竞争条款）
   → tender_extract_requirements  # ① 再做 LLM 语义补充
   → project_facts_init           # ①.5 从需求建立单一事实源（12 类事实自动提取）
+  → bid_score_price              # ② 报价策略：按评标办法复算各报价的价格分，选定报价策略
   → kb_search_materials          # ③ 检索取材（来源即后续 FactCheck 依据）
   → [LLM 生成章节]
   → project_facts_check          # ③.5 生成内容与事实表一致性校验
   → bid_mask_pii                 # ④ 生成即脱敏
+  → bid_precheck_bid             # ④.5 评标前否决项自检（P01-P12），REJECT_RISK 项先整改
   → bid_scan_disclosure          # ⑤ 身份泄露扫描
   → bid_check_rules              # ⑤ 规则引擎判定（元数据/痕迹/图片）
   → bid_audit_docx               # ⑤（定稿后）对 docx 做全量几何审计，堵住字体/页边距/页眉页脚/水印等格式废标点
